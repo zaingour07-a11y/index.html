@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cartoon Video Maker</title>
+    <!-- Tailwind CSS for Modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-extrabold text-yellow-400 tracking-wide">🎬 AI Cartoon Video Creator</h1>
+            <p class="text-slate-400 mt-2">Apna dialogue likhein, character chunein aur YouTube ke liye video download karein!</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Controls Panel -->
+            <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5">
+                
+                <!-- Character Selection -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-300">1. Character Chunein</label>
+                    <select id="charSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white">
+                        <option value="chintu">Chintu (Boy)</option>
+                        <option value="pinky">Pinky (Girl)</option>
+                        <option value="alien">Robo Alien</option>
+                    </select>
+                </div>
+
+                <!-- Background Selection -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-300">2. Background Chunein</label>
+                    <select id="bgSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white">
+                        <option value="classroom">Classroom / Room</option>
+                        <option value="jungle">Green Jungle</option>
+                        <option value="sunset">Sunset Evening</option>
+                    </select>
+                </div>
+
+                <!-- Voice Pitch / Cartoon Speed -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-300">3. Cartoon Voice Pitch</label>
+                    <input type="range" id="voicePitch" min="1.0" max="2.0" step="0.1" value="1.6" class="w-full accent-yellow-400">
+                    <span class="text-xs text-slate-400">Jitna zyada hoga, aawaz utni cartoon lagegi.</span>
+                </div>
+
+                <!-- Dialogue Input -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-300">4. Dialogue Likhein</label>
+                    <textarea id="dialogueInput" rows="4" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-slate-400" placeholder="Namaste dosto! Aaj hum YouTube par cartoon video banana seekhenge..."></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="space-y-3 pt-2">
+                    <button id="previewBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md">
+                        🔊 Bolkar Dikhao (Preview)
+                    </button>
+
+                    <button id="recordBtn" class="w-full bg-red-600 hover:bg-red-500 font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2">
+                        <span>🔴</span> Video Record & Download
+                    </button>
+                </div>
+
+                <div id="statusText" class="text-center text-sm font-medium text-yellow-400 min-h-[20px]"></div>
+            </div>
+
+            <!-- Canvas Video Preview Screen -->
+            <div class="lg:col-span-2 flex flex-col items-center justify-center">
+                <canvas id="videoCanvas" width="1280" height="720" class="w-full max-w-2xl bg-black aspect-video"></canvas>
+                <div class="mt-4 text-xs text-slate-500 flex items-center gap-2">
+                    <span>⚡ Standard YouTube Format: 16:9 (1280x720 HD)</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Animation & Logic Engine -->
+    <script>
+        const canvas = document.getElementById('videoCanvas');
+        const ctx = canvas.getContext('2d');
+        const dialogueInput = document.getElementById('dialogueInput');
+        const charSelect = document.getElementById('charSelect');
+        const bgSelect = document.getElementById('bgSelect');
+        const voicePitch = document.getElementById('voicePitch');
+        const previewBtn = document.getElementById('previewBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const statusText = document.getElementById('statusText');
+
+        let isSpeaking = false;
+        let mouthOpen = 0;
+        let eyeBlink = false;
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        // Animation Loop
+        setInterval(() => {
+            eyeBlink = Math.random() > 0.9;
+        }, 2000);
+
+        function drawBackground() {
+            const bg = bgSelect.value;
+            if (bg === 'classroom') {
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(0, canvas.height - 180, canvas.width, 180);
+                // Blackboard
+                ctx.fillStyle = '#064e3b';
+                ctx.fillRect(200, 80, 880, 350);
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 16;
+                ctx.strokeRect(200, 80, 880, 350);
+            } else if (bg === 'jungle') {
+                ctx.fillStyle = '#6ee7b7';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#047857';
+                ctx.beginPath();
+                ctx.arc(300, 800, 500, 0, Math.PI * 2);
+                ctx.arc(1000, 850, 600, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (bg === 'sunset') {
+                let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                grad.addColorStop(0, '#f97316');
+                grad.addColorStop(1, '#6366f1');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(640, 400, 100, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawCharacter() {
+            const char = charSelect.value;
+            const centerX = 640;
+            const centerY = 480;
+
+            // Body
+            ctx.fillStyle = char === 'pinky' ? '#ec4899' : (char === 'alien' ? '#10b981' : '#f59e0b');
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 220, 160, 200, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Head
+            ctx.fillStyle = char === 'alien' ? '#34d399' : '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 130, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(centerX - 45, centerY - 20, 26, 0, Math.PI * 2);
+            ctx.arc(centerX + 45, centerY - 20, 26, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyeballs
+            if (!eyeBlink) {
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(centerX - 45, centerY - 20, 12, 0, Math.PI * 2);
+                ctx.arc(centerX + 45, centerY - 20, 12, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Closed eyes on blink
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 65, centerY - 20);
+                ctx.lineTo(centerX - 25, centerY - 20);
+                ctx.moveTo(centerX + 25, centerY - 20);
+                ctx.lineTo(centerX + 65, centerY - 20);
+                ctx.stroke();
+            }
+
+            // Talking Mouth (Lip Sync)
+            ctx.fillStyle = '#991b1b';
+            ctx.beginPath();
+            if (isSpeaking) {
+                mouthOpen = Math.sin(Date.now() / 80) * 22 + 25; // Continuous talking motion
+                ctx.ellipse(centerX, centerY + 50, 28, Math.max(5, mouthOpen), 0, 0, Math.PI * 2);
+            } else {
+                ctx.arc(centerX, centerY + 45, 20, 0, Math.PI); // Smile
+            }
+            ctx.fill();
+        }
+
+        function renderFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawCharacter();
+            requestAnimationFrame(renderFrame);
+        }
+        renderFrame();
+
+        // Speech Generation
+        function speak(onEndCallback) {
+            const text = dialogueInput.value.trim() || "Namaste! Apna dialogue yahan type kijiye!";
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.pitch = parseFloat(voicePitch.value);
+            utterance.rate = 1.0;
+
+            // Pick Hindi or Indian English voice if available
+            const voices = window.speechSynthesis.getVoices();
+            const hiVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN'));
+            if (hiVoice) utterance.voice = hiVoice;
+
+            utterance.onstart = () => {
+                isSpeaking = true;
+            };
+            utterance.onend = () => {
+                isSpeaking = false;
+                if (onEndCallback) onEndCallback();
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Preview Button
+        previewBtn.addEventListener('click', () => {
+            statusText.innerText = "🗣️ Bol raha hai...";
+            speak(() => {
+                statusText.innerText = "";
+            });
+        });
+
+        // Record & Export Video Button
+        recordBtn.addEventListener('click', () => {
+            statusText.innerText = "🔴 Video Record ho rahi hai...";
+            recordBtn.disabled = true;
+
+            const stream = canvas.captureStream(30); // 30 FPS HD
+            recordedChunks = [];
+            
+            try {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cartoon_video.webm';
+                a.click();
+                statusText.innerText = "✅ Video Download ho gayi!";
+                recordBtn.disabled = false;
+            };
+
+            mediaRecorder.start();
+
+            // Speak and stop recording when finished
+            speak(() => {
+                setTimeout(() => {
+                    mediaRecorder.stop();
+                }, 500);
+            });
+        });
+    </script>
+</body>
+                      </html>
